@@ -1840,6 +1840,7 @@ namespace YAXLib
                 member.CollectionAttributeInstance.SerializationType == YAXCollectionSerializationTypes.RecursiveWithNoContainingElement))
                 throw new ArgumentException("member should be a collection serialized without containing element");
 
+            List<XName> eachElementNames = new List<XName>();
             XName eachElementName = null;
 
             if (member.CollectionAttributeInstance != null)
@@ -1852,14 +1853,33 @@ namespace YAXLib
                 eachElementName = StringUtils.RefineSingleElement(member.DictionaryAttributeInstance.EachPairName);
             }
 
-            if (eachElementName == null)
+            if (eachElementName != null)
+                eachElementNames.Add(eachElementName);
+
+            if (eachElementNames.Count == 0)
             {
                 Type colItemType = ReflectionUtils.GetCollectionItemType(member.MemberType);
-                eachElementName = StringUtils.RefineSingleElement(ReflectionUtils.GetTypeFriendlyName(colItemType));
+                //eachElementName.Add(StringUtils.RefineSingleElement(ReflectionUtils.GetTypeFriendlyName(colItemType)));
+
+                var mappableTypes = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
+                                     from assemblyType in assembly.GetTypes()
+                                     where colItemType.IsAssignableFrom(assemblyType) && !assemblyType.IsAbstract
+                                     select assemblyType);
+                foreach (var m in mappableTypes)
+                {
+                    eachElementName = StringUtils.RefineSingleElement(ReflectionUtils.GetTypeFriendlyName(m));
+                    if (eachElementName != null)
+                        eachElementNames.Add(eachElementName);
+                }
             }
 
             // return if such an element exists
-            return (elem.Element(eachElementName.OverrideNsIfEmpty(member.Namespace.IfEmptyThen(TypeNamespace).IfEmptyThenNone())) != null);
+            foreach (var el in eachElementNames)
+            {
+                if (elem.Element(el.OverrideNsIfEmpty(member.Namespace.IfEmptyThen(TypeNamespace).IfEmptyThenNone())) != null)
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -1869,9 +1889,17 @@ namespace YAXLib
         /// <param name="elem">The XML element to check its content.</param>
         /// <param name="type">The class-member corresponding to the object for
         /// which we intend to check existence of its members.</param>
+        /// <param name="preventLoopList">Checks, if this type has already been checked (StackOverflow prevention)</param>
         /// <returns></returns>
-        private bool AtLeastOneOfMembersExists(XElement elem, Type type)
+        private bool AtLeastOneOfMembersExists(XElement elem, Type type, List<Type> preventLoopList = null)
         {
+            if (preventLoopList == null)
+                preventLoopList = new List<Type>();
+
+            if (preventLoopList.Contains(type))
+                return false;
+            preventLoopList.Add(type);
+
             if (elem == null)
                 throw new ArgumentNullException("elem");
 
@@ -1908,8 +1936,8 @@ namespace YAXLib
                     XElement xelem = XMLUtils.FindElement(elem, member.SerializationLocation, member.Alias);
                     if (xelem == null)
                     {
-                        if (!ReflectionUtils.IsBasicType(member.MemberType) 
-                            && !member.IsTreatedAsCollection 
+                        if (!ReflectionUtils.IsBasicType(member.MemberType)
+                            && !member.IsTreatedAsCollection
                             && !member.IsTreatedAsDictionary
                             && member.MemberType != m_type) // searching for same type objects will lead to infinite loops
                         {
@@ -1917,7 +1945,7 @@ namespace YAXLib
                             XElement fakeElem = XMLUtils.CreateElement(elem, member.SerializationLocation, member.Alias);
                             if (fakeElem != null)
                             {
-                                bool memberExists = AtLeastOneOfMembersExists(fakeElem, member.MemberType);
+                                bool memberExists = AtLeastOneOfMembersExists(fakeElem, member.MemberType, preventLoopList);
                                 fakeElem.Remove();
                                 if (memberExists)
                                     return true;
@@ -2130,6 +2158,21 @@ namespace YAXLib
 
                 var elemsToSearch = eachElemName == null ? xelemValue.Elements() : xelemValue.Elements(eachElemName);
 
+                var mappableTypes = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
+                                     from assemblyType in assembly.GetTypes()
+                                     where itemType.IsAssignableFrom(assemblyType) && !assemblyType.IsAbstract
+                                     select assemblyType);
+                var itemTypes = new Dictionary<XName, Type>();
+                foreach (var m in mappableTypes)
+                {
+                    XName eachElementName = StringUtils.RefineSingleElement(ReflectionUtils.GetTypeFriendlyName(m));
+                    if (eachElementName != null)
+                    {
+                        var ele = eachElementName.OverrideNsIfEmpty(memberAlias.Namespace.IfEmptyThen(TypeNamespace).IfEmptyThenNone());
+                        itemTypes[ele] = m;
+                    }
+                }
+
                 foreach (XElement childElem in elemsToSearch)
                 {
                     Type curElementType = itemType;
@@ -2164,9 +2207,25 @@ namespace YAXLib
                     else
                     {
                         var namespaceToOverride = memberAlias.Namespace.IfEmptyThen(TypeNamespace).IfEmptyThenNone();
-                        var ser = NewInternalSerializer(curElementType, namespaceToOverride, null);
-                        lst.Add(ser.DeserializeBase(childElem));
-                        FinalizeNewSerializer(ser, false);
+                        XName curName = StringUtils.RefineSingleElement(ReflectionUtils.GetTypeFriendlyName(curElementType));
+                        curName = curName.OverrideNsIfEmpty(namespaceToOverride);
+                        if (eachElemName != null)
+                            curName = eachElemName;
+                        if (childElem.Name == curName || !itemTypes.ContainsKey(childElem.Name))
+                        {
+                            if (!curElementType.IsAbstract)
+                            {
+                                var ser = NewInternalSerializer(curElementType, namespaceToOverride, null);
+                                lst.Add(ser.DeserializeBase(childElem));
+                                FinalizeNewSerializer(ser, false);
+                            }
+                        }
+                        else if (itemTypes.ContainsKey(childElem.Name))
+                        {
+                            var ser = NewInternalSerializer(itemTypes[childElem.Name], namespaceToOverride, null);
+                            lst.Add(ser.DeserializeBase(childElem));
+                            FinalizeNewSerializer(ser, false);
+                        }
                     }
                 }
             } // end of else if 
