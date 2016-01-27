@@ -824,7 +824,7 @@ namespace YAXLib
                 }
                 else if (genTypeArg != this.MemberType)
                 {
-                    throw new YAXException("The generic argument of the class and the member type do not match");
+                    throw new YAXException(String.Format("The generic argument of the class and the member type do not match: {0} instead of {1}", genTypeArg, MemberType));
                 }
                 else
                 {

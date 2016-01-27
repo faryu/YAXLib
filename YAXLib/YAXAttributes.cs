@@ -420,6 +420,12 @@ namespace YAXLib
         /// </value>
         public bool IsWhiteSpaceSeparator { get; set; }
 
+        /// <summary>
+        /// Gets or sets the type of the custom value serializer.
+        /// </summary>
+        /// <value>The type of the custom serializer.</value>
+        public Type CustomValueSerializerType { get; set; }
+
         #endregion
     }
 
@@ -511,6 +517,18 @@ namespace YAXLib
         /// </summary>
         /// <value></value>
         public string ValueFormatString { get; set; }
+
+        /// <summary>
+        /// Gets or sets the type of the key custom serializer.
+        /// </summary>
+        /// <value>The type of the custom serializer.</value>
+        public Type CustomSerializerKeyType { get; set; }
+
+        /// <summary>
+        /// Gets or sets the type of the value custom serializer.
+        /// </summary>
+        /// <value>The type of the custom serializer.</value>
+        public Type CustomSerializerValueType { get; set; }
 
         private void CheckIntegrity()
         {
