@@ -1942,8 +1942,7 @@ namespace YAXLib
                 Type colItemType = ReflectionUtils.GetCollectionItemType(member.MemberType);
                 //eachElementName.Add(StringUtils.RefineSingleElement(ReflectionUtils.GetTypeFriendlyName(colItemType)));
 
-                var mappableTypes = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
-                    from assemblyType in assembly.GetLoadableTypes()
+                var mappableTypes = (from assemblyType in AssemblyHandler.LoadedClasses
                     where colItemType.IsAssignableFrom(assemblyType) && !assemblyType.IsAbstract
                     select assemblyType);
                 foreach (var m in mappableTypes)
@@ -2263,8 +2262,7 @@ namespace YAXLib
 
                 var elemsToSearch = eachElemName == null ? xelemValue.Elements() : xelemValue.Elements(eachElemName);
 
-                var mappableTypes = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
-                    from assemblyType in assembly.GetLoadableTypes()
+                var mappableTypes = (from assemblyType in AssemblyHandler.LoadedClasses
                     where itemType.IsAssignableFrom(assemblyType) && !assemblyType.IsAbstract
                     select assemblyType);
                 var itemTypes = new Dictionary<XName, Type>();

@@ -47,19 +47,6 @@ namespace YAXLib
             }
         }
 
-        public static IEnumerable<Type> GetLoadableTypes(this Assembly assembly)
-        {
-            if (assembly == null) return new Type[] { };//throw new ArgumentNullException("assembly");
-            try
-            {
-                return assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException e)
-            {
-                return e.Types.Where(t => t != null);
-            }
-        }
-
         /// <summary>
         /// Determines whether the specified type is array.
         /// </summary>
