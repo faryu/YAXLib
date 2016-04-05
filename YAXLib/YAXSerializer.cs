@@ -3013,61 +3013,73 @@ namespace YAXLib
 
         private static bool SerializeToElement(object objToSerialize, Type customSerializerType, XElement elemToFill, XNamespace overrideNamespace)
         {
-            if (customSerializerType != null)
+            if (objToSerialize != null)
             {
-                object ser = customSerializerType.InvokeMember(string.Empty, BindingFlags.CreateInstance, null,
-                    null,
-                    new object[0]);
-                customSerializerType.InvokeMember("SerializeToElement", BindingFlags.InvokeMethod, null, ser,
-                    new[] {objToSerialize, elemToFill});
-                return true;
-            }
-            else if (KnownTypes.IsKnowType(objToSerialize.GetType()))
-            {
-                KnownTypes.Serialize(objToSerialize, elemToFill, overrideNamespace);
-                return true;
+                if (customSerializerType != null)
+                {
+                    object ser = customSerializerType.InvokeMember(string.Empty, BindingFlags.CreateInstance, null,
+                        null,
+                        new object[0]);
+                    customSerializerType.InvokeMember("SerializeToElement", BindingFlags.InvokeMethod, null, ser,
+                        new[] {objToSerialize, elemToFill});
+                    return true;
+                }
+                else if (KnownTypes.IsKnowType(objToSerialize.GetType()))
+                {
+                    KnownTypes.Serialize(objToSerialize, elemToFill, overrideNamespace);
+                    return true;
+                }
             }
             return false;
         }
 
         private static bool SerializeToAttribute(object objToSerialize, Type customSerializerType, XAttribute attrToFill)
         {
-            if (customSerializerType != null)
+            if (objToSerialize != null)
             {
-                object customSerializer = customSerializerType.InvokeMember(string.Empty, BindingFlags.CreateInstance, null, null,
-                new object[0]);
-                customSerializerType.InvokeMember("SerializeToAttribute", BindingFlags.InvokeMethod, null, customSerializer,
-                    new[] { objToSerialize, attrToFill });
-                return true;
-            }
-            if (KnownTypes.IsKnowType(objToSerialize.GetType()))
-            {
-                var tempLoc = new XElement("temp");
-                KnownTypes.Serialize(objToSerialize, tempLoc, String.Empty);
-                attrToFill.Value = tempLoc.Value;
-                return true;
+                if (customSerializerType != null)
+                {
+                    object customSerializer = customSerializerType.InvokeMember(string.Empty,
+                        BindingFlags.CreateInstance, null, null,
+                        new object[0]);
+                    customSerializerType.InvokeMember("SerializeToAttribute", BindingFlags.InvokeMethod, null,
+                        customSerializer,
+                        new[] {objToSerialize, attrToFill});
+                    return true;
+                }
+                if (KnownTypes.IsKnowType(objToSerialize.GetType()))
+                {
+                    var tempLoc = new XElement("temp");
+                    KnownTypes.Serialize(objToSerialize, tempLoc, String.Empty);
+                    attrToFill.Value = tempLoc.Value;
+                    return true;
+                }
             }
             return false;
         }
 
         private static bool SerializeToValue(object objToSerialize, Type customSerializerType, out string value)
         {
-            if (customSerializerType != null)
+            if (objToSerialize != null)
             {
-                object customSerializer = customSerializerType.InvokeMember(string.Empty, BindingFlags.CreateInstance,
-                    null, null,
-                    new object[0]);
-                value = customSerializerType.InvokeMember("SerializeToValue", BindingFlags.InvokeMethod, null,
-                            customSerializer,
-                            new[] {objToSerialize}) as string;
-                return true;
-            }
-            if (KnownTypes.IsKnowType(objToSerialize.GetType()))
-            {
-                var tempLoc = new XElement("temp");
-                KnownTypes.Serialize(objToSerialize, tempLoc, String.Empty);
-                value = tempLoc.Value;
-                return true;
+                if (customSerializerType != null)
+                {
+                    object customSerializer = customSerializerType.InvokeMember(string.Empty,
+                        BindingFlags.CreateInstance,
+                        null, null,
+                        new object[0]);
+                    value = customSerializerType.InvokeMember("SerializeToValue", BindingFlags.InvokeMethod, null,
+                        customSerializer,
+                        new[] {objToSerialize}) as string;
+                    return true;
+                }
+                if (KnownTypes.IsKnowType(objToSerialize.GetType()))
+                {
+                    var tempLoc = new XElement("temp");
+                    KnownTypes.Serialize(objToSerialize, tempLoc, String.Empty);
+                    value = tempLoc.Value;
+                    return true;
+                }
             }
 
             value = null;
