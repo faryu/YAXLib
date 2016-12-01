@@ -2201,15 +2201,25 @@ namespace YAXLib
             object containerObj = null;
             if (ReflectionUtils.IsInstantiableCollection(colType))
             {
-                var namespaceToOverride = memberAlias.Namespace.IfEmptyThen(TypeNamespace).IfEmptyThenNone();
+                if (colAttrInstance != null &&
+                    colAttrInstance.SerializationType ==
+                    YAXCollectionSerializationTypes.RecursiveWithNoContainingElement)
+                {
+                    containerObj = colType.InvokeMember(string.Empty, System.Reflection.BindingFlags.CreateInstance, null,
+                        null, new object[] {  });
+                }
+                else
+                {
+                    var namespaceToOverride = memberAlias.Namespace.IfEmptyThen(TypeNamespace).IfEmptyThenNone();
 
-                var containerSer = NewInternalSerializer(colType, namespaceToOverride, null);
+                    var containerSer = NewInternalSerializer(colType, namespaceToOverride, null);
 
-                containerSer.IsCraetedToDeserializeANonCollectionMember = true;
-                containerSer.RemoveDeserializedXmlNodes = true;
+                    containerSer.IsCraetedToDeserializeANonCollectionMember = true;
+                    containerSer.RemoveDeserializedXmlNodes = true;
 
-                containerObj = containerSer.DeserializeBase(xelemValue);
-                FinalizeNewSerializer(containerSer, false);
+                    containerObj = containerSer.DeserializeBase(xelemValue);
+                    FinalizeNewSerializer(containerSer, false);
+                }
             }
 
             var lst = new List<object>(); // this will hold the actual data items
@@ -2557,8 +2567,10 @@ namespace YAXLib
             else
             {
                 XName memberAlias = member.Alias.OverrideNsIfEmpty(TypeNamespace);
-                colObject = DeserializeCollectionValue(colType, xelemValue, memberAlias,
-                    member.CollectionAttributeInstance);
+                if (member.CollectionAttributeInstance != null && member.CollectionAttributeInstance.SerializationType == YAXCollectionSerializationTypes.RecursiveWithNoContainingElement)
+                    colObject = DeserializeCollectionValue(member.MemberType, xelemValue, xelemValue.Name, member.CollectionAttributeInstance);
+                else
+                    colObject = DeserializeCollectionValue(colType, xelemValue, memberAlias, member.CollectionAttributeInstance);
             }
 
             try
